@@ -1,0 +1,198 @@
+{% extends "layout.html" %}
+
+{% block title %}Ticket Scan{% endblock %}
+
+{% block content %}
+<script>
+    function updateClock() {
+        const now = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const dateString = now.toLocaleDateString('id-ID', options);
+        const timeString = now.toLocaleTimeString('id-ID');
+        document.getElementById('clock').innerHTML = dateString + ' - ' + timeString;
+    }
+
+    function checkGateStatus() {
+        fetch('/gate_status')
+            .then(response => response.text())
+            .then(status => {
+                const statusElement = document.getElementById('gate-status');
+                if (status === 'TERBUKA') {
+                    statusElement.className = 'badge bg-success';
+                    statusElement.textContent = 'Gerbang TERBUKA';
+                } else {
+                    statusElement.className = 'badge bg-danger';
+                    statusElement.textContent = 'Gerbang TERTUTUP';
+                }
+            });
+    }
+
+    function checkArduinoStatus() {
+        fetch('/arduino_status')
+            .then(response => response.text())
+            .then(status => {
+                const statusElement = document.getElementById('arduino-status');
+                statusElement.innerHTML = status === 'connected'
+                    ? '<span class="badge bg-success">Arduino Terhubung</span>'
+                    : '<span class="badge bg-danger">Arduino Tidak Terhubung</span>';
+            });
+    }
+
+    function checkDatabaseStatus() {
+        fetch('/database_status')
+            .then(response => response.text())
+            .then(status => {
+                const statusElement = document.getElementById('database-status');
+                statusElement.innerHTML = status === 'connected'
+                    ? '<span class="badge bg-success">Database Terhubung</span>'
+                    : '<span class="badge bg-danger">Database Tidak Terhubung</span>';
+            });
+    }
+
+    setInterval(updateClock, 1000);
+    setInterval(checkGateStatus, 1000);
+    setInterval(checkArduinoStatus, 5000);
+    setInterval(checkDatabaseStatus, 5000);
+
+    window.onload = () => {
+        updateClock();
+        checkGateStatus();
+        checkArduinoStatus();
+        checkDatabaseStatus();
+    };
+
+    function checkGateStatus() {
+        fetch('/gate_status')
+            .then(response => response.text())
+            .then(status => {
+                const statusElement = document.getElementById('gate-status');
+                if (status === 'TERBUKA') {
+                    statusElement.className = 'gate-status gate-open';
+                    statusElement.textContent = 'Status Gerbang: TERBUKA';
+                } else {
+                    statusElement.className = 'gate-status gate-closed';
+                    statusElement.textContent = 'Status Gerbang: TERTUTUP';
+                }
+            });
+    }
+</script>
+
+<div class="container mt-5">
+    <h3 class="text-center mb-3">Scan Tiket QR Code</h3>
+    <p class="text-center text-muted" id="clock"></p>
+
+    <div class="text-center mb-3">
+        <span id="gate-status" class="badge bg-secondary me-2">Status Gerbang</span>
+        <span id="arduino-status" class="me-2"><span class="badge bg-secondary">Memeriksa Arduino...</span></span>
+        <span id="database-status"><span class="badge bg-secondary">Memeriksa Database...</span></span>
+    </div>
+
+    <div class="row justify-content-center">
+        <!-- QR Code & Manual -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <div id="qr-reader" class="mx-auto p-3 border rounded bg-light" style="width: 100%; max-width: 500px;"></div>
+                    <a href="/open_gate" class="btn btn-warning btn-sm mt-3"><strong>Buka Gerbang Manual</strong></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hasil Scan & Pembayaran -->
+        <div class="col-lg-6">
+            <div id="result" class="mb-3"></div>
+            <div class="d-flex justify-content-center">
+                <button class="btn btn-success" id="pay-btn" style="display: none;">Tandai Sudah Bayar</button>
+            </div>
+            <div id="payment-result" class="text-center"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+    let html5QrcodeScanner;
+    let scannedId = null;
+
+    function onScanSuccess(decodedText, decodedResult) {
+        scannedId = decodedText;
+        document.getElementById("pay-btn").style.display = "inline-block";
+
+        fetch(`/api/vehicle/by-image/${decodedText}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("result").innerHTML = `
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex flex-column flex-md-row align-items-start">
+                                    <img src="/static/photo/${data.record.Image}" alt="Vehicle Image"
+                                         class="img-thumbnail me-md-4 mb-3" style="max-width: 250px;">
+                                    <ul class="list-group w-100">
+                                        <li class="list-group-item"><strong>Nomor Polisi:</strong><br>${data.record.NoPol}</li>
+                                        <li class="list-group-item"><strong>Status Pembayaran:</strong> ${data.record.PaymentStat}</li>
+                                        <li class="list-group-item"><strong>Waktu Masuk:</strong><br>${data.record.CreatedAt}</li>
+                                        <li class="list-group-item"><strong>Durasi:</strong> ${data.record.DurationHours} jam</li>
+                                        <li class="list-group-item"><strong>Biaya:</strong> Rp${data.record.Fee.toLocaleString()}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>`;
+                } else {
+                    document.getElementById("result").innerText = data.message;
+                }
+            });
+    }
+
+    function startScanner() {
+        document.getElementById("result").innerHTML = "";
+        document.getElementById("payment-result").innerHTML = "";
+        document.getElementById("qr-reader").style.display = "block";
+        document.getElementById("pay-btn").style.display = "none";
+
+        html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: 400 });
+        html5QrcodeScanner.render(onScanSuccess, () => {
+            const videoElement = document.querySelector("#qr-reader video");
+            if (videoElement) {
+                videoElement.style.transform = "scaleX(-1)";
+            }
+        });
+    }
+
+    document.getElementById("pay-btn").addEventListener("click", function () {
+        if (!scannedId) return;
+
+        fetch(`/api/vehicle/pay-by-image/${scannedId}`, { method: "POST" })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("result").innerHTML = "";
+                    document.getElementById("pay-btn").style.display = "none";
+
+                    const alertHTML = `
+                        <div class="alert alert-success" role="alert" id="payment-alert">
+                            Pembayaran berhasil!<br>
+                            <strong>Diperbarui:</strong> ${data.updatedAt}<br>
+                            <strong>Durasi:</strong> ${data.durationHours} jam<br>
+                            <strong>Total Biaya:</strong> Rp${data.fee.toLocaleString()}
+                        </div>`;
+                    document.getElementById("payment-result").innerHTML = alertHTML;
+
+                    fetch('/open_gate')
+                        .then(res => res.text())
+                        .then(msg => console.log("Gerbang dibuka:", msg))
+                        .catch(err => console.error("Gagal membuka gerbang:", err));
+
+                    setTimeout(() => {
+                        const alert = document.getElementById("payment-alert");
+                        if (alert) alert.remove();
+                    }, 3000);
+                } else {
+                    document.getElementById("payment-result").innerText = data.message;
+                }
+            });
+    });
+
+    startScanner();
+</script>
+{% endblock %}

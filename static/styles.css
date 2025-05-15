@@ -1,0 +1,105 @@
+/* styles.css */
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+}
+
+.wrapper {
+    display: flex;
+    flex: 1;
+}
+
+.sidebar {
+    width: 220px;
+    background-color: #007bff;
+    min-height: 100vh;
+    padding-top: 60px;
+    transition: width 0.3s;
+}
+
+.sidebar.collapsed {
+    width: 60px;
+}
+
+.sidebar a {
+    color: white;
+    padding: 12px 20px;
+    display: block;
+    text-decoration: none;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.sidebar a:hover {
+    background-color: #0056b3;
+}
+
+.main {
+    flex: 1;
+    padding: 20px;
+    transition: margin-left 0.3s;
+}
+
+.footer {
+    background-color: #007bff;
+    color: white;
+    text-align: center;
+    padding: 10px;
+}
+
+.toggle-btn {
+    position: absolute;
+    top: 10px;
+    left: 230px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: left 0.3s;
+    z-index: 1001;
+}
+
+.sidebar.collapsed + .main .toggle-btn {
+    left: 70px;
+}
+
+.main.collapsed {
+    margin-left: 60px;
+}
+
+.main.expanded {
+    margin-left: 220px;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: absolute;
+        z-index: 1000;
+        height: 100%;
+    }
+
+    .main {
+        margin-left: 0;
+    }
+
+    .toggle-btn {
+        left: 10px !important;
+    }
+}
+
+.sidebar.collapsed a {
+    font-size: 0;
+    padding: 12px 10px;
+}
+
+.sidebar.collapsed a::before {
+    content: "";
+    font-size: 20px;
+    display: inline-block;
+}

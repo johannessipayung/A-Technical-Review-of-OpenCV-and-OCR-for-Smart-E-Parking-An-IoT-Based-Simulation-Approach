@@ -1,0 +1,179 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    .btn-group .btn.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .section-header {
+        text-align: center;
+        margin-top: 30px;
+        margin-bottom: 15px;
+        font-size: 1.6rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .chart-container {
+        position: relative;
+        padding: 15px;
+        background: linear-gradient(145deg, #ffffff, #e6e6e6);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+        border-radius: 12px;
+    }
+
+    .btn-group {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .btn-group .btn {
+        padding: 8px 16px;
+        font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+        .section-header {
+            font-size: 1.3rem;
+        }
+
+        .btn-group .btn {
+            font-size: 0.9rem;
+            padding: 6px 12px;
+        }
+    }
+</style>
+
+<h1 class="text-center my-4">📊 Dashboard Parkir</h1>
+
+<div class="row justify-content-center">
+    <!-- Kolom Pendapatan -->
+    <div class="col-md-6 mb-4">
+        <div class="section-header">Pendapatan</div>
+        <div class="btn-group mb-3">
+            <button id="hourBtn" class="btn btn-outline-primary active">Per Jam</button>
+            <button id="dayBtn" class="btn btn-outline-primary">Per Hari</button>
+            <button id="weekBtn" class="btn btn-outline-primary">Per Minggu</button>
+            <button id="monthBtn" class="btn btn-outline-primary">Per Bulan</button>
+        </div>
+        <div class="chart-container">
+            <canvas id="incomeChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Kolom Kendaraan Masuk -->
+    <div class="col-md-6 mb-4">
+        <div class="section-header">Kendaraan Masuk (7 Hari Terakhir)</div>
+        <div class="chart-container">
+            <canvas id="entriesChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const incomeData = {{ income | tojson }};
+    const incomeLabels = {
+        hour: "Per Jam",
+        day: "Per Hari",
+        week: "Per Minggu",
+        month: "Per Bulan"
+    };
+
+    const days = {{ days | tojson }};
+    const counts = {{ counts | tojson }};
+
+    const ctxIncome = document.getElementById('incomeChart').getContext('2d');
+    const incomeChart = new Chart(ctxIncome, {
+        type: 'bar',
+        data: {
+            labels: [incomeLabels.hour],
+            datasets: [{
+                label: 'Pendapatan (Rp)',
+                data: [incomeData.hour],
+                backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                borderWidth: 1,
+                borderRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: value => 'Rp ' + value.toLocaleString()
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: context => 'Rp ' + context.raw.toLocaleString()
+                    }
+                }
+            }
+        }
+    });
+
+    const ctxEntries = document.getElementById('entriesChart').getContext('2d');
+    const entriesChart = new Chart(ctxEntries, {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [{
+                label: 'Jumlah Kendaraan',
+                data: counts,
+                borderColor: 'rgba(40, 167, 69, 1)',
+                backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                tension: 0.3,
+                fill: true,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: context => context.raw + ' kendaraan'
+                    }
+                }
+            }
+        }
+    });
+
+    const buttons = {
+        hourBtn: 'hour',
+        dayBtn: 'day',
+        weekBtn: 'week',
+        monthBtn: 'month'
+    };
+
+    for (const [btnId, period] of Object.entries(buttons)) {
+        document.getElementById(btnId).addEventListener('click', () => {
+            document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(btnId).classList.add('active');
+
+            incomeChart.data.labels = [incomeLabels[period]];
+            incomeChart.data.datasets[0].data = [incomeData[period]];
+            incomeChart.update();
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'layout.html' %}
+
+{% block title %}Vehicle Records{% endblock %}
+
+{% block content %}
+<h1 class="text-center mb-4">🚗 Vehicle Records</h1>
+
+<!-- DataTables Bootstrap 5 CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+<div class="table-responsive">
+    <table id="vehicleTable" class="table table-hover table-bordered align-middle">
+        <thead class="table-primary text-center">
+        <tr>
+            <th>ID</th>
+            <th>Number Police</th>
+            <th>Image</th>
+            <th>Enter</th>
+            <th>Out</th>
+            <th>Payment Status</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+        <tr>
+            <td class="text-center">{{ row[0] }}</td>
+            <td class="fw-semibold text-uppercase text-center">{{ row[1] }}</td>
+            <td class="text-center">
+                {% if row[2] %}
+                <img src="{{ url_for('static', filename='photo/' ~ row[2]) }}"
+                     alt="Vehicle Image"
+                     class="img-thumbnail"
+                     width="100"
+                     title="Click to view full image"
+                     style="cursor:pointer;"
+                     onclick="window.open(this.src, '_blank')">
+                {% else %}
+                <span class="text-muted">No image</span>
+                {% endif %}
+            </td>
+            <td class="text-center">{{ row[4] }}</td>
+            <td class="text-center">{{ row[5] }}</td>
+            <td class="text-center">
+                {% if row[3] == 'Paid' %}
+                <span class="badge bg-success"><i class="bi bi-check-circle-fill"></i> Paid</span>
+                {% elif row[3] == 'Unpaid' %}
+                <span class="badge bg-danger"><i class="bi bi-x-circle-fill"></i> Unpaid</span>
+                {% else %}
+                <span class="badge bg-secondary">Unknown</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- jQuery & DataTables + Bootstrap 5 -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    $(document).ready(function () {
+        $('#vehicleTable').DataTable({
+            responsive: true,
+            language: {
+                search: "🔍 Search:",
+                lengthMenu: "Show _MENU_ entries",
+                info: "Showing _START_ to _END_ of _TOTAL_ vehicles",
+                paginate: {
+                    next: "Next →",
+                    previous: "← Prev"
+                },
+                zeroRecords: "No matching records found"
+            },
+            columnDefs: [
+                { className: "text-center", targets: "_all" }
+            ]
+        });
+    });
+</script>
+{% endblock %}
